@@ -152,7 +152,7 @@
 
   .editor-custom-btn-container {
     position: absolute;
-    right: 10px;
+    right: 90px;
     top: 2px;
     /*z-index: 2005;*/
   }
