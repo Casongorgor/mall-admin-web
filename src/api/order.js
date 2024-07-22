@@ -61,3 +61,11 @@ export function updateOrderNote(params) {
     params:params
   })
 }
+
+export function payOrder(params) {
+  return request({
+    url:'/order/paySuccess',
+    method:'post',
+    params:params
+  })
+}

@@ -280,7 +280,9 @@
           return '支付宝';
         } else if (value === 2) {
           return '微信';
-        } else {
+        } else if (value === 100) {
+          return '线下';
+        }else {
           return '未支付';
         }
       },
@@ -439,12 +441,16 @@
       },
       covertOrder(order){
         let address=order.receiverProvince+order.receiverCity+order.receiverRegion+order.receiverDetailAddress;
+        if(order.receiverCountry){
+          address=order.receiverArea+", "+order.receiverDetailAddress+" "+order.receiverDetailAddress2;
+        }
         let listItem={
           orderId:order.id,
           orderSn:order.orderSn,
           receiverName:order.receiverName,
           receiverPhone:order.receiverPhone,
           receiverPostCode:order.receiverPostCode,
+          receiverCountry:order.receiverCountry,
           address:address,
           deliveryCompany:null,
           deliverySn:null

@@ -19,6 +19,7 @@
           <el-button size="mini" @click="showMessageDialog">发送站内信</el-button>
           <el-button size="mini" @click="showCloseOrderDialog">关闭订单</el-button>
           <el-button size="mini" @click="showMarkOrderDialog">备注订单</el-button>
+          <el-button size="mini" @click="showPayOrderDialog">线下支付</el-button>
         </div>
         <div class="operate-button-container" v-show="order.status===1">
           <el-button size="mini" @click="showUpdateReceiverDialog">修改收货人信息</el-button>
@@ -91,13 +92,13 @@
         <el-row>
           <el-col :span="6" class="table-cell-title">收货人</el-col>
           <el-col :span="6" class="table-cell-title">手机号码</el-col>
-          <el-col :span="6" class="table-cell-title">邮政编码</el-col>
+          <el-col :span="6" class="table-cell-title">国家</el-col>
           <el-col :span="6" class="table-cell-title">收货地址</el-col>
         </el-row>
         <el-row>
           <el-col :span="6" class="table-cell">{{order.receiverName}}</el-col>
           <el-col :span="6" class="table-cell">{{order.receiverPhone}}</el-col>
-          <el-col :span="6" class="table-cell">{{order.receiverPostCode}}</el-col>
+          <el-col :span="6" class="table-cell">{{order.receiverCountry}}</el-col>
           <el-col :span="6" class="table-cell">{{order | formatAddress}}</el-col>
         </el-row>
       </div>
@@ -231,18 +232,24 @@
           <el-input v-model="receiverInfo.receiverPhone" style="width: 200px">
           </el-input>
         </el-form-item>
-        <el-form-item label="邮政编码：">
-          <el-input v-model="receiverInfo.receiverPostCode" style="width: 200px">
+        <el-form-item label="所在国家：">
+          <el-input v-model="receiverInfo.receiverCountry" style="width: 200px">
           </el-input>
         </el-form-item>
         <el-form-item label="所在区域：">
-          <v-distpicker :province="receiverInfo.receiverProvince"
-                        :city="receiverInfo.receiverCity"
-                        :area="receiverInfo.receiverRegion"
-                        @selected="onSelectRegion"></v-distpicker>
+          <el-input v-model="receiverInfo.receiverArea" style="width: 200px">
+          </el-input>
+<!--          <v-distpicker :province="receiverInfo.receiverProvince"-->
+<!--                        :city="receiverInfo.receiverCity"-->
+<!--                        :area="receiverInfo.receiverRegion"-->
+<!--                        @selected="onSelectRegion"></v-distpicker>-->
         </el-form-item>
         <el-form-item label="详细地址：">
-          <el-input v-model="receiverInfo.receiverDetailAddress" type="textarea" rows="3">
+          <el-input v-model="receiverInfo.receiverDetailAddress" type="textarea" rows="2">
+          </el-input>
+        </el-form-item>
+        <el-form-item label="详细地址line 2：">
+          <el-input v-model="receiverInfo.receiverDetailAddress2" type="textarea" rows="2">
           </el-input>
         </el-form-item>
       </el-form>
@@ -342,11 +349,26 @@
         <el-button type="primary" @click="handleMarkOrder">确 定</el-button>
       </span>
     </el-dialog>
+    <el-dialog title="线下支付订单"
+               :visible.sync="payOrderDialogVisible"
+               width="40%">
+      <el-form :model="markInfo"
+               label-width="150px">
+        <el-form-item label="支付备注：">
+          <el-input v-model="markInfo.remark" type="textarea" rows="3">
+          </el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="payOrderDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="handlePayOrder">确 定</el-button>
+      </span>
+    </el-dialog>
     <logistics-dialog v-model="logisticsDialogVisible"></logistics-dialog>
   </div>
 </template>
 <script>
-  import {getOrderDetail,updateReceiverInfo,updateMoneyInfo,closeOrder,updateOrderNote,deleteOrder} from '@/api/order';
+  import {getOrderDetail,updateReceiverInfo,updateMoneyInfo,closeOrder,updateOrderNote,deleteOrder,payOrder} from '@/api/order';
   import LogisticsDialog from '@/views/oms/order/components/logisticsDialog';
   import {formatDate} from '@/utils/date';
   import VDistpicker from 'v-distpicker';
@@ -354,11 +376,10 @@
     orderId:null,
     receiverName:null,
     receiverPhone:null,
-    receiverPostCode:null,
+    receiverCountry:null,
     receiverDetailAddress:null,
-    receiverProvince:null,
-    receiverCity:null,
-    receiverRegion:null,
+    receiverDetailAddress2:null,
+    receiverArea:null,
     status:null
   };
   export default {
@@ -377,7 +398,8 @@
         closeDialogVisible:false,
         closeInfo:{note:null,id:null},
         markOrderDialogVisible:false,
-        markInfo:{note:null},
+        payOrderDialogVisible:false,
+        markInfo:{note:null,remark:null},
         logisticsDialogVisible:false
       }
     },
@@ -409,7 +431,9 @@
           return '支付宝';
         } else if (value === 2) {
           return '微信';
-        } else {
+        } else if (value === 100) {
+          return '线下';
+        }else {
           return '未支付';
         }
       },
@@ -428,12 +452,12 @@
         }
       },
       formatAddress(order) {
-        let str = order.receiverProvince;
-        if (order.receiverCity != null) {
-          str += "  " + order.receiverCity;
-        }
-        str += "  " + order.receiverRegion;
+        let str = order.receiverArea;
         str += "  " + order.receiverDetailAddress;
+        if (order.receiverDetailAddress2 != null) {
+          str += "  " + order.receiverDetailAddress2;
+        }
+
         return str;
       },
       formatStatus(value) {
@@ -615,7 +639,12 @@
       showMarkOrderDialog(){
         this.markOrderDialogVisible=true;
         this.markInfo.id=this.id;
-        this.closeOrder.note=null;
+        this.markInfo.note=null;
+      },
+      showPayOrderDialog(){
+        this.payOrderDialogVisible=true;
+        this.markInfo.id=this.id;
+        this.markInfo.remark=null;
       },
       handleMarkOrder(){
         this.$confirm('是否要备注订单?', '提示', {
@@ -632,6 +661,27 @@
             this.$message({
               type: 'success',
               message: '订单备注成功!'
+            });
+            getOrderDetail(this.id).then(response => {
+              this.order = response.data;
+            });
+          });
+        });
+      },
+      handlePayOrder(){
+        this.$confirm('是否确定以完成订单支付?', '提示', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }).then(() => {
+          let params = new URLSearchParams();
+          params.append("orderId",this.markInfo.id);
+          params.append("remark",this.markInfo.remark);
+          payOrder(params).then(response=>{
+            this.payOrderDialogVisible=false;
+            this.$message({
+              type: 'success',
+              message: '订单线下支付成功!'
             });
             getOrderDetail(this.id).then(response => {
               this.order = response.data;

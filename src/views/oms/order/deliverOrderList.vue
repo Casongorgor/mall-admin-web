@@ -17,8 +17,8 @@
         <el-table-column label="手机号码" width="160" align="center">
           <template slot-scope="scope">{{scope.row.receiverPhone}}</template>
         </el-table-column>
-        <el-table-column label="邮政编码" width="160" align="center">
-          <template slot-scope="scope">{{scope.row.receiverPostCode}}</template>
+        <el-table-column label="国家" width="160" align="center">
+          <template slot-scope="scope">{{scope.row.receiverCountry}}</template>
         </el-table-column>
         <el-table-column label="收货地址" align="center">
           <template slot-scope="scope">{{scope.row.address}}</template>
